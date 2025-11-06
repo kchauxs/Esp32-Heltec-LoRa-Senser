@@ -57,13 +57,15 @@ void handlePostData(AsyncWebServerRequest *request, uint8_t *data, size_t len)
 
     if (error)
     {
-        DEBUG_PRINTLN("❌ Error deserializando JSON: " + String(error.c_str()));
+        DEBUG_PRINTLN("❌ Error deserialized JSON: " + String(error.c_str()));
         request->send(400, "application/json", "{\"status\":\"fail\"}");
         return;
     }
 
     // Extraer campos del JSON
-    String ts = String(jsonDoc["ts"].as<long>());
+    // String ts = String(jsonDoc["ts"].as<long>());
+    String dt = jsonDoc["dt"].as<String>();
+    String tm = jsonDoc["tm"].as<String>();
     String ent = jsonDoc["ent"].as<String>();
     String mat = jsonDoc["mat"].as<String>();
     String dest = jsonDoc["dest"].as<String>();
@@ -77,9 +79,13 @@ void handlePostData(AsyncWebServerRequest *request, uint8_t *data, size_t len)
     String op = jsonDoc["op"].as<String>();
     String obs = jsonDoc["obs"].as<String>();
 
-    String csvData = ts + "," + ent + "," + mat + "," + dest + "," + orig + "," +
+    String csvData = dt + "," + tm + "," + ent + "," + mat + "," + dest + "," + orig + "," +
                      qty + "," + val + "," + drv + "," + pl + "," + lp + "," +
                      mach + "," + op + "," + obs + "," + ctx.deviceID;
+                     
+    // String csvData = ts + ","+ dt + "," + tm + "," + ent + "," + mat + "," + dest + "," + orig + "," +
+    //                  qty + "," + val + "," + drv + "," + pl + "," + lp + "," +
+    //                  mach + "," + op + "," + obs + "," + ctx.deviceID;
 
     DEBUG_PRINTLN("📤 Enviando datos por LoRa (formato CSV):");
     DEBUG_PRINTLN(csvData);

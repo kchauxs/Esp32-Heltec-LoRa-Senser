@@ -210,7 +210,7 @@ const char htmlForm[] PROGMEM = R"rawliteral(
             <input type="text" id="operator_name" name="operator_name" value="Juan Gómez" required />
 
             <label for="observations">Observaciones</label>
-            <textarea id="observations" name="observations" maxlength="128">
+            <textarea id="observations" name="observations" maxlength="96">
 Carga verificada en sitio por el operador</textarea>
 
             <button type="submit">Enviar</button>
@@ -240,8 +240,8 @@ Carga verificada en sitio por el operador</textarea>
 
             const data = {
                 ts: getTimestamp(),
-                // dt: getValue("date"),
-                // tm: getValue("time"),
+                dt: getValue("date"),
+                tm: getValue("time"),
                 ent: getValue("entity"),
                 mat: getValue("material_type"),
                 dest: getValue("destination"),
