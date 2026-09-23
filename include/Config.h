@@ -6,7 +6,7 @@
 //----------------------------------------------
 // DEVICE CONFIG
 //----------------------------------------------
-#define SERIAL_DEBUG !false
+#define SERIAL_DEBUG false
 //----------------------------------------------
 #if SERIAL_DEBUG
 #define DEBUG_PRINT(msg) Serial.print(msg)
