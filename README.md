@@ -16,7 +16,13 @@ The board works as a standalone data collection and transmission station without
 
 ## Prototype
 
-![Prototype of the ESP32 Heltec LoRa Sender](assets/images/image_of_the_prototype.jpeg)
+### Sender
+
+![Sender prototype](assets/images/image_of_the_prototype_sender.jpeg)
+
+### Receiver
+
+![Receiver prototype](assets/images/image_of_the_prototype_receiver.jpeg)
 
 ---
 
