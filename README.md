@@ -14,6 +14,10 @@ The application is designed for an industrial or logistics use case:
 
 The board works as a standalone data collection and transmission station without needing internet access or an external server.
 
+## Prototype
+
+![Prototype of the ESP32 Heltec LoRa Sender](assets/images/image_of_the_prototype.jpeg)
+
 ---
 
 ## Key features
