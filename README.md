@@ -1,6 +1,6 @@
 # ESP32 Heltec LoRa Sender
 
-This project uses a Heltec WiFi LoRa 32 V2 board to create an ESP32-based data transmitter. The device acts as a local Wi‑Fi access point, serves a small web form for capturing material loading data, and sends the collected information through LoRa to another receiving device.
+This project uses a Heltec WiFi LoRa 32 V2 board to create an ESP32-based LoRa sender. The device acts as a local Wi‑Fi access point, serves a web form for capturing material-loading data, and sends the collected information through LoRa to the companion ESP32 receiver/gateway project.
 
 ## Overview
 
@@ -12,7 +12,7 @@ The application is designed for an industrial or logistics use case:
 - converts it into CSV format,
 - and transmits it over LoRa using a configurable frequency.
 
-The board works as a standalone data collection and transmission station without needing internet access or an external server.
+The sender works as a standalone data collection and transmission station without needing internet access or an external server. The receiver completes the end-to-end flow by converting the LoRa CSV payload into JSON and publishing it to MQTT.
 
 ## Prototype
 
@@ -37,22 +37,25 @@ The board works as a standalone data collection and transmission station without
 - OLED display for system monitoring
 - Unique device ID generated from the ESP32 MAC address
 - Packet counter for transmitted messages
+- Compatible with the companion ESP32 SX1278 receiver/gateway
 
 ---
 
-## Flow diagram
+## System architecture
 
 ```mermaid
 flowchart TD
-    A[Web form] --> B[POST /submit]
-    B --> C[ESP32 receives JSON]
-    C --> D[JSON parsing]
-    D --> E[Convert to CSV]
-    E --> F[LoRa begin packet]
-    F --> G[LoRa send data]
-    G --> H[LoRa end packet]
-    H --> I[Receiver captures data]
+  A[Operator] --> B[Sender web form]
+  B --> C[JSON payload]
+  C --> D[Sender converts JSON to CSV]
+  D --> E[LoRa 433 MHz]
+  E --> F[ESP32 SX1278 receiver]
+  F --> G[CSV to JSON]
+  G --> H[MQTT broker]
+  H --> I[Backend, dashboard, or IoT platform]
 ```
+
+The companion receiver project is located at `Esp32-SX1247B-LoRa-Receiver`. Its current implementation uses an ESP32 DevKit V1 with an SX1278-compatible LoRa module, receives the sender payload, adds radio diagnostics, and publishes the resulting JSON through MQTT.
 
 ---
 
@@ -62,7 +65,7 @@ flowchart TD
 - LoRa frequency: 433 MHz
 - Compatible LoRa antenna
 - USB power supply or suitable ESP32 power source
-- Optional: another LoRa module or receiver for validation
+- Companion receiver: ESP32 DevKit V1 with an SX1278-compatible LoRa module
 
 ---
 
@@ -131,6 +134,31 @@ The main configuration is in [include/Config.h](include/Config.h):
 #define DEFAULT_WIFI_AP_SSID "LoRa-Sender-Server"
 #define DEFAULT_WIFI_AP_PASSWORD "12345678"
 ```
+
+### Sender and receiver compatibility
+
+The sender and receiver must use the same LoRa radio settings:
+
+| Parameter | Sender | Receiver |
+| --- | --- | --- |
+| Frequency | 433 MHz | 433 MHz |
+| Spreading factor | SF9 | SF9 |
+| Signal bandwidth | 125 kHz | 125 kHz |
+| Coding rate | 4/5 | 4/5 |
+| CRC | Enabled | Enabled |
+
+The pin mappings are board-specific and do not need to match:
+
+- Sender Heltec WiFi LoRa 32 V2: SS `18`, RST `14`, DIO0 `26`
+- Receiver ESP32 + SX1278 module: SS `5`, RST `14`, DIO0 `26`
+
+The receiver expects a 14-field CSV payload in this order:
+
+```text
+ts,ent,mat,dest,orig,qty,val,drv,pl,lp,mach,op,obs,deviceID
+```
+
+The sender appends its unique device ID as the final field. The receiver uses that value as the source identifier and adds its own radio metadata, including RSSI, to the JSON published through MQTT.
 
 ### Wi‑Fi access point
 
@@ -253,7 +281,7 @@ The ESP32 receives the request and prepares it for LoRa transmission.
 
 ---
 
-## LoRa transmission format
+## LoRa transmission and receiver output
 
 After it is received, the data is converted into a CSV line. Example output:
 
@@ -263,15 +291,38 @@ After it is received, the data is converted into a CSV line. Example output:
 
 The final identifier `ESP32LORA123456` corresponds to the unique device ID generated from the ESP32 chip.
 
+After receiving the CSV, the companion receiver publishes a JSON message to its configured MQTT topic. Its default configuration uses:
+
+- MQTT broker: `broker.emqx.io`
+- MQTT port: `1883`
+- Publish topic: `apolo/data/test`
+
+The receiver adds device and radio information similar to:
+
+```json
+{
+  "device": {
+    "id": "ESP32LORA654321",
+    "from": "ESP32LORA123456",
+    "tx": "LoRa",
+    "rssi": -85,
+    "unit": "dbm"
+  }
+}
+```
+
 ---
 
 ## Important considerations
 
 - The LoRa frequency of the transmitter and receiver must match.
+- The LoRa modulation parameters must match on both devices: SF9, 125 kHz bandwidth, coding rate 4/5, and CRC enabled.
 - The Wi‑Fi network created by the ESP32 is for local access only, not general internet use.
 - This project is intended for closed or local data transmission environments.
 - The OLED screen is only for monitoring; it does not replace the serial monitor.
 - The serial monitor should be used for debugging and internal event checks.
+- The receiver needs Wi‑Fi access to reach the MQTT broker; LoRa itself does not provide internet connectivity.
+- The receiver's default MQTT broker is public test infrastructure and should be replaced for production use.
 
 ---
 
@@ -301,6 +352,16 @@ This is the main receive-and-send function:
 - builds the CSV line,
 - transmits the packet over LoRa,
 - responds to the client with `ok` or `fail` status.
+
+### Receiver responsibilities
+
+The companion receiver:
+
+- listens for LoRa packets,
+- measures RSSI, SNR, and frequency error,
+- converts the fixed-format CSV payload to JSON,
+- connects to Wi‑Fi using stored credentials or WiFiManager,
+- and publishes the JSON to MQTT.
 
 ---
 
